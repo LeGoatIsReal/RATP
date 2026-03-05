@@ -1,0 +1,1094 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Générateur d'Attestation RATP</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=Syne:wght@700;800&display=swap');
+
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    :root {
+      --ratp-blue: #003189;
+      --ratp-cyan: #009EE0;
+      --accent: #E8F4FD;
+      --text: #1a1a2e;
+      --muted: #6b7280;
+      --border: #e5e7eb;
+      --white: #ffffff;
+      --success: #10b981;
+    }
+
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: #f0f4f8;
+      min-height: 100vh;
+      color: var(--text);
+    }
+
+    /* HEADER */
+    header {
+      background: var(--ratp-blue);
+      padding: 18px 40px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      box-shadow: 0 4px 20px rgba(0, 49, 137, 0.3);
+    }
+
+    .ratp-logo {
+      width: 48px;
+      height: 48px;
+      background: white;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      font-size: 11px;
+      color: var(--ratp-blue);
+      letter-spacing: -0.5px;
+      flex-shrink: 0;
+    }
+
+    header h1 {
+      font-family: 'Syne', sans-serif;
+      font-size: 1.4rem;
+      color: white;
+      font-weight: 700;
+    }
+
+    header p {
+      color: rgba(255, 255, 255, 0.7);
+      font-size: 0.82rem;
+      margin-top: 2px;
+    }
+
+    .disclaimer-banner {
+      background: #fff3cd;
+      border-bottom: 2px solid #ffc107;
+      padding: 10px 40px;
+      font-size: 0.8rem;
+      color: #856404;
+      text-align: center;
+    }
+
+    /* LAYOUT */
+    .container {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 40px 24px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 32px;
+      align-items: start;
+    }
+
+    @media (max-width: 768px) {
+      .container {
+        grid-template-columns: 1fr;
+        padding: 20px 16px;
+      }
+
+      header {
+        padding: 14px 20px;
+      }
+
+      .disclaimer-banner {
+        padding: 10px 20px;
+      }
+    }
+
+    /* FORM CARD */
+    .form-card {
+      background: white;
+      border-radius: 16px;
+      box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08);
+      overflow: hidden;
+    }
+
+    .form-card-header {
+      background: linear-gradient(135deg, var(--ratp-blue), var(--ratp-cyan));
+      padding: 20px 24px;
+      color: white;
+    }
+
+    .form-card-header h2 {
+      font-family: 'Syne', sans-serif;
+      font-size: 1.1rem;
+    }
+
+    .form-card-header p {
+      font-size: 0.8rem;
+      opacity: 0.8;
+      margin-top: 4px;
+    }
+
+    .form-body {
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    label {
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    input[type="text"],
+    input[type="date"],
+    input[type="time"],
+    select,
+    textarea {
+      padding: 10px 14px;
+      border: 1.5px solid var(--border);
+      border-radius: 8px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 0.95rem;
+      color: var(--text);
+      background: white;
+      transition: border-color 0.2s, box-shadow 0.2s;
+      outline: none;
+      width: 100%;
+    }
+
+    input:focus,
+    select:focus,
+    textarea:focus {
+      border-color: var(--ratp-cyan);
+      box-shadow: 0 0 0 3px rgba(0, 158, 224, 0.15);
+    }
+
+    .radio-group {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .radio-option {
+      flex: 1;
+      min-width: 140px;
+      border: 2px solid var(--border);
+      border-radius: 10px;
+      padding: 12px 14px;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      user-select: none;
+    }
+
+    .radio-option:hover {
+      border-color: var(--ratp-cyan);
+      background: var(--accent);
+    }
+
+    .radio-option.selected {
+      border-color: var(--ratp-blue);
+      background: var(--accent);
+    }
+
+    .radio-option input {
+      display: none;
+    }
+
+    .radio-circle {
+      width: 18px;
+      height: 18px;
+      border-radius: 4px;
+      border: 2px solid var(--border);
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s;
+    }
+
+    .radio-option.selected .radio-circle {
+      background: var(--ratp-blue);
+      border-color: var(--ratp-blue);
+      color: white;
+    }
+
+    .radio-circle svg {
+      width: 11px;
+      height: 11px;
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+
+    .radio-option.selected .radio-circle svg {
+      opacity: 1;
+    }
+
+    .radio-label {
+      font-size: 0.88rem;
+      font-weight: 500;
+    }
+
+    .ligne-grid {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 8px;
+    }
+
+    .ligne-btn {
+      aspect-ratio: 1;
+      border-radius: 50%;
+      border: 2px solid var(--border);
+      font-weight: 700;
+      font-size: 0.85rem;
+      cursor: pointer;
+      background: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s;
+      color: var(--text);
+      flex-direction: column;
+      gap: 1px;
+    }
+
+    .ligne-btn span.sub {
+      font-size: 0.55rem;
+      font-weight: 600;
+    }
+
+    .ligne-btn:hover {
+      transform: scale(1.08);
+    }
+
+    .ligne-btn.active {
+      color: white;
+      border-color: transparent;
+    }
+
+    /* RER colors */
+    .ligne-btn[data-ligne="A"].active {
+      background: #E2001A;
+    }
+
+    .ligne-btn[data-ligne="B"].active {
+      background: #5191CD;
+    }
+
+    .ligne-btn[data-ligne="C"].active {
+      background: #F3A300;
+    }
+
+    .ligne-btn[data-ligne="D"].active {
+      background: #00A550;
+    }
+
+    .ligne-btn[data-ligne="E"].active {
+      background: #CC007A;
+    }
+
+    .ligne-btn[data-ligne="L"].active {
+      background: #A0006E;
+    }
+
+    /* Métro */
+    .ligne-btn[data-ligne="1"].active {
+      background: #FFCD00;
+      color: #222;
+    }
+
+    .ligne-btn[data-ligne="2"].active {
+      background: #003189;
+    }
+
+    .ligne-btn[data-ligne="3"].active {
+      background: #9E6E14;
+    }
+
+    .ligne-btn[data-ligne="4"].active {
+      background: #CF007E;
+    }
+
+    .ligne-btn[data-ligne="5"].active {
+      background: #FF7E2E;
+    }
+
+    .ligne-btn[data-ligne="6"].active {
+      background: #6EC4E8;
+    }
+
+    .ligne-btn[data-ligne="7"].active {
+      background: #FA9ABA;
+      color: #333;
+    }
+
+    .ligne-btn[data-ligne="8"].active {
+      background: #E19BDF;
+      color: #333;
+    }
+
+    .ligne-btn[data-ligne="9"].active {
+      background: #B6BD00;
+    }
+
+    .ligne-btn[data-ligne="10"].active {
+      background: #C9A600;
+    }
+
+    .ligne-btn[data-ligne="11"].active {
+      background: #8D5E2A;
+    }
+
+    .ligne-btn[data-ligne="12"].active {
+      background: #007852;
+    }
+
+    .ligne-btn[data-ligne="13"].active {
+      background: #98D4E2;
+      color: #333;
+    }
+
+    .ligne-btn[data-ligne="14"].active {
+      background: #662483;
+    }
+
+    .type-section {
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 6px;
+    }
+
+    .date-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    .btn-generate {
+      background: linear-gradient(135deg, var(--ratp-blue), var(--ratp-cyan));
+      color: white;
+      border: none;
+      border-radius: 10px;
+      padding: 14px 20px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      transition: opacity 0.2s, transform 0.1s;
+      margin-top: 4px;
+    }
+
+    .btn-generate:hover {
+      opacity: 0.92;
+      transform: translateY(-1px);
+    }
+
+    .btn-generate:active {
+      transform: translateY(0);
+    }
+
+    /* PREVIEW */
+    .preview-sticky {
+      position: sticky;
+      top: 24px;
+    }
+
+    .preview-card {
+      background: white;
+      border-radius: 16px;
+      box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08);
+      overflow: hidden;
+    }
+
+    .preview-header {
+      padding: 14px 20px;
+      background: #f9fafb;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .preview-header span {
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .preview-doc {
+      padding: 28px 28px 24px;
+      font-family: Arial, Helvetica, sans-serif;
+    }
+
+    .doc-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      border-top: 8.5px solid var(--ratp-blue);
+      border-bottom: 2.5px solid var(--ratp-blue);
+      margin-bottom: 30px;
+    }
+
+    .doc-title {
+      font-size: 2.2rem;
+      margin-top: 30px;
+      font-weight: 700;
+      color: var(--ratp-blue);
+      font-family: Arial, sans-serif;
+      margin-bottom: 8px;
+    }
+
+    .doc-logo {
+      width: 75px;
+      height: 75px;
+    }
+
+    .doc-checkboxes {
+      margin: 14px 0;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-bottom: 50px;
+    }
+
+    .doc-checkbox {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 1.1rem;
+      font-weight: 600;
+    }
+
+    .doc-box {
+      width: 18px;
+      height: 18px;
+      border: 2px solid #333;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+
+    .doc-box.checked {
+      color: #333;
+    }
+
+    .doc-field {
+      margin: 10px 0;
+      font-size: 1rem;
+      color: #222;
+    }
+
+    .doc-field-incident {
+      margin: 10px 0;
+      font-size: 1rem;
+      color: #222;
+      margin-bottom: 30px;
+    }
+
+    .doc-field strong {
+      font-weight: 700;
+    }
+
+    .doc-ligne-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      margin-left: 4px;
+      vertical-align: middle;
+    }
+
+    .rer-badge {
+      background: #003189;
+      color: white;
+      font-size: 0.65rem;
+      font-weight: 800;
+      padding: 2px 5px;
+      border-radius: 3px;
+      font-family: Arial, sans-serif;
+    }
+
+    .ligne-circle-badge {
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-size: 0.72rem;
+      font-weight: 800;
+      font-family: Arial, sans-serif;
+    }
+
+    .doc-divider-1 {
+      border: none;
+      border-top: 2px solid var(--ratp-blue);
+      margin-top: 55px;
+    }
+
+    .doc-divider {
+      border: none;
+      border-top: 2px solid var(--ratp-blue);
+      margin-top: 20px;
+    }
+
+    .doc-italic {
+      font-family: Montserrat;
+      font-style: italic;
+      font-size: 0.9rem;
+      color: var(--ratp-blue);
+      margin: 5px 0;
+      line-height: 1;
+      font-weight: bolder;
+}
+
+    .doc-contact {
+      margin: 8px 0;
+    }
+
+    .doc-contact-num {
+      margin-left: 30px;
+      font-size: 1.2rem;
+      font-weight: 700;
+      color: var(--ratp-blue);
+    }
+
+    .doc-contact-sub {
+      font-size: 0.7rem;
+      color: var(--ratp-blue);
+    }
+
+    .doc-contact-links {
+      margin-left: 30px;
+      font-size: 0.82rem;
+      font-weight: 700;
+      color: var(--ratp-blue);
+      padding: 3px 0;
+    }
+
+    .doc-disclaimer {
+      font-style: italic;
+      font-size: 1rem;
+      color: #000000;
+      line-height: 1;
+      margin-top: 10px;
+    }
+
+    .watermark {
+      text-align: center;
+      font-size: 0.7rem;
+      color: #aaa;
+      padding: 8px;
+      border-top: 1px solid var(--border);
+      font-style: italic;
+    }
+  </style>
+</head>
+
+<body>
+
+  <header>
+    <div class="ratp-logo">RATP</div>
+    <div>
+      <h1>Générateur d'Attestation</h1>
+      <p>Perturbation de transport — Format officiel</p>
+    </div>
+  </header>
+
+  <div class="disclaimer-banner">
+    ⚠️ Cet outil est à usage educatif uniquement. Les attestations générées n'ont aucune valeur officielle et ne
+    doivent pas être utilisées à des fins frauduleuses.
+  </div>
+
+  <div class="container">
+
+    <!-- FORM -->
+    <div class="form-card">
+      <div class="form-card-header">
+        <h2>Informations de l'attestation</h2>
+        <p>Remplissez les champs ci-dessous pour générer votre document</p>
+      </div>
+      <div class="form-body">
+
+        <div class="field">
+          <label>Durée de perturbation</label>
+          <div class="radio-group">
+            <label class="radio-option" id="opt15" onclick="selectDelay(15)">
+              <div class="radio-circle">
+                <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2.5">
+                  <polyline points="2,6 5,9 10,3" />
+                </svg>
+              </div>
+              <span class="radio-label">+ de 15 min</span>
+            </label>
+            <label class="radio-option selected" id="opt30" onclick="selectDelay(30)">
+              <div class="radio-circle">
+                <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2.5">
+                  <polyline points="2,6 5,9 10,3" />
+                </svg>
+              </div>
+              <span class="radio-label">+ de 30 min</span>
+            </label>
+          </div>
+        </div>
+
+        <div class="field">
+          <label>Nature de l'incident</label>
+          <select id="incident" onchange="updatePreview()">
+            <option value="Chute d'arbre sur les voies">Chute d'arbre sur les voies</option>
+            <option value="Malaise voyageur">Malaise voyageur</option>
+            <option value="Panne de matériel roulant">Panne de matériel roulant</option>
+            <option value="Défaillance d'infrastructure">Défaillance d'infrastructure</option>
+            <option value="Intrusion sur les voies">Intrusion sur les voies</option>
+            <option value="Problème de signalisation">Problème de signalisation</option>
+            <option value="Mouvement social">Mouvement social</option>
+            <option value="Caténaire endommagée">Caténaire endommagée</option>
+            <option value="Colis suspect">Colis suspect</option>
+            <option value="custom">Autre (personnalisé)...</option>
+          </select>
+          <input type="text" id="incident-custom" placeholder="Décrivez l'incident..."
+            style="display:none; margin-top:8px;" oninput="updatePreview()">
+        </div>
+
+        <div class="field">
+          <label>Ligne concernée</label>
+          <div class="type-section">RER</div>
+          <div class="ligne-grid">
+            <button class="ligne-btn active" data-ligne="A" onclick="selectLigne(this)">A</button>
+            <button class="ligne-btn" data-ligne="B" onclick="selectLigne(this)">B</button>
+            <button class="ligne-btn" data-ligne="C" onclick="selectLigne(this)">C</button>
+            <button class="ligne-btn" data-ligne="D" onclick="selectLigne(this)">D</button>
+            <button class="ligne-btn" data-ligne="E" onclick="selectLigne(this)">E</button>
+            <button class="ligne-btn" data-ligne="L" onclick="selectLigne(this)">L</button>
+          </div>
+          <div class="type-section" style="margin-top:12px;">Métro</div>
+          <div class="ligne-grid">
+            <button class="ligne-btn" data-ligne="1" onclick="selectLigne(this)">1</button>
+            <button class="ligne-btn" data-ligne="2" onclick="selectLigne(this)">2</button>
+            <button class="ligne-btn" data-ligne="3" onclick="selectLigne(this)">3</button>
+            <button class="ligne-btn" data-ligne="4" onclick="selectLigne(this)">4</button>
+            <button class="ligne-btn" data-ligne="5" onclick="selectLigne(this)">5</button>
+            <button class="ligne-btn" data-ligne="6" onclick="selectLigne(this)">6</button>
+            <button class="ligne-btn" data-ligne="7" onclick="selectLigne(this)">7</button>
+            <button class="ligne-btn" data-ligne="8" onclick="selectLigne(this)">8</button>
+            <button class="ligne-btn" data-ligne="9" onclick="selectLigne(this)">9</button>
+            <button class="ligne-btn" data-ligne="10" onclick="selectLigne(this)">10</button>
+            <button class="ligne-btn" data-ligne="11" onclick="selectLigne(this)">11</button>
+            <button class="ligne-btn" data-ligne="12" onclick="selectLigne(this)">12</button>
+            <button class="ligne-btn" data-ligne="13" onclick="selectLigne(this)">13</button>
+            <button class="ligne-btn" data-ligne="14" onclick="selectLigne(this)">14</button>
+          </div>
+        </div>
+
+        <div class="field" id="rer-option-field" style="display:none;">
+          <label>Option RER (branche / direction)</label>
+          <select id="rer-option" onchange="updatePreview()"></select>
+        </div>
+
+        <div class="field">
+          <label>Date et heure de l'incident</label>
+          <div class="date-row">
+            <input type="date" id="incident-date" onchange="updatePreview()">
+            <input type="time" id="incident-time" onchange="updatePreview()">
+          </div>
+        </div>
+
+        <div class="field">
+          <label>Date et heure de délivrance</label>
+          <div class="date-row">
+            <input type="date" id="delivery-date" onchange="updatePreview()">
+            <input type="time" id="delivery-time" onchange="updatePreview()">
+          </div>
+        </div>
+
+        <div class="field">
+          <label>Nom du voyageur</label>
+          <input type="text" id="nom-voyageur" placeholder="ex: yanis Amaouche" oninput="updatePreview()">
+        </div>
+
+        <div class="field">
+          <label>Numéro d'agent (optionnel)</label>
+          <input type="text" id="agent-num" placeholder="ex: GB236678" oninput="updatePreview()">
+        </div>
+
+        <button class="btn-generate" onclick="generatePDF()">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+            <polyline points="14 2 14 8 20 8" />
+            <line x1="12" y1="18" x2="12" y2="12" />
+            <line x1="9" y1="15" x2="15" y2="15" />
+          </svg>
+          Télécharger l'attestation PDF
+        </button>
+
+      </div>
+    </div>
+
+    <!-- PREVIEW -->
+    <div class="preview-sticky">
+      <div class="preview-card">
+        <div class="preview-doc" id="doc-preview">
+          <!-- filled by JS -->
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    // State
+    let selectedDelay = 30;
+    let selectedLigne = 'A';
+    let isRER = true;
+
+    // Ligne colors for preview badge
+    const ligneColors = {
+      A: '#E2001A', B: '#5191CD', C: '#F3A300', D: '#00A550', E: '#CC007A', L: '#A0006E',
+      '1': '#FFCD00', '2': '#003189', '3': '#9E6E14', '4': '#CF007E', '5': '#FF7E2E',
+      '6': '#6EC4E8', '7': '#FA9ABA', '8': '#E19BDF', '9': '#B6BD00', '10': '#C9A600',
+      '11': '#8D5E2A', '12': '#007852', '13': '#98D4E2', '14': '#662483'
+    };
+    const ligneTextColors = {
+      '1': '#222', '7': '#333', '8': '#333', '13': '#333'
+    };
+    const rerLignes = ['A', 'B', 'C', 'D', 'E', 'L'];
+    const rerLogosByLine = {
+      A: 'rera.svg',
+      B: 'rerb.svg',
+      C: 'rerc.svg',
+      D: 'rerd.svg',
+      E: 'rere.svg',
+      L: 'rerl.png'
+    };
+    const rerOptionsByLine = {
+      A: [
+        'Aucune precision',
+        'Direction Cergy / Poissy',
+        'Direction Saint-Germain-en-Laye',
+        'Direction Boissy-Saint-Leger / Marne-la-Vallee'
+      ],
+      B: [
+        'Aucune precision',
+        'Direction Aeroport Charles de Gaulle',
+        'Direction Mitry-Claye',
+        'Direction Saint-Remy-les-Chevreuse / Robinson'
+      ],
+      C: [
+        'Aucune precision',
+        'Branche Pontoise',
+        'Branche Versailles-Chateau-Rive-Gauche',
+        'Branche Dourdan / Saint-Martin-d Etampes',
+        'Branche Massy-Palaiseau'
+      ],
+      D: [
+        'Aucune precision',
+        'Direction Orry-la-Ville / Creil',
+        'Direction Goussainville',
+        'Direction Melun / Corbeil-Essonnes',
+        'Direction Malesherbes'
+      ],
+      E: [
+        'Aucune precision',
+        'Direction Chelles-Gournay',
+        'Direction Tournan',
+        'Direction Nanterre-la-Folie'
+      ],
+      L: [
+        'Aucune precision',
+        'Direction Gare de Saint-Cloud',
+        'Direction Gare de Vincennes'
+      ]
+    };
+
+    // Init defaults
+    window.addEventListener('DOMContentLoaded', () => {
+      const now = new Date();
+      const pad = n => String(n).padStart(2, '0');
+      const defaultDate = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+      const defaultTime = `${pad(now.getHours())}:${pad(now.getMinutes())}`;
+      document.getElementById('incident-date').value = defaultDate;
+      document.getElementById('incident-time').value = defaultTime;
+      document.getElementById('delivery-date').value = defaultDate;
+      document.getElementById('delivery-time').value = defaultTime;
+      document.getElementById('agent-num').value = 'GB' + Math.floor(100000 + Math.random() * 900000);
+      updateRerOptions();
+      updatePreview();
+    });
+
+    document.getElementById('incident').addEventListener('change', function () {
+      const custom = document.getElementById('incident-custom');
+      custom.style.display = this.value === 'custom' ? 'block' : 'none';
+      updatePreview();
+    });
+
+    function selectDelay(val) {
+      selectedDelay = val;
+      document.getElementById('opt15').classList.toggle('selected', val === 15);
+      document.getElementById('opt30').classList.toggle('selected', val === 30);
+      updatePreview();
+    }
+
+    function selectLigne(btn) {
+      document.querySelectorAll('.ligne-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      selectedLigne = btn.dataset.ligne;
+      isRER = rerLignes.includes(selectedLigne);
+      updateRerOptions();
+      updatePreview();
+    }
+
+    function updateRerOptions() {
+      const rerField = document.getElementById('rer-option-field');
+      const rerSelect = document.getElementById('rer-option');
+
+      if (!rerField || !rerSelect) return;
+
+      if (!isRER) {
+        rerField.style.display = 'none';
+        rerSelect.innerHTML = '';
+        return;
+      }
+
+      rerField.style.display = 'flex';
+      const options = rerOptionsByLine[selectedLigne] || ['Aucune precision'];
+      rerSelect.innerHTML = options.map(opt => `<option value="${opt}">${opt}</option>`).join('');
+    }
+
+    function getSelectedRerOption() {
+      const rerSelect = document.getElementById('rer-option');
+      if (!isRER || !rerSelect || !rerSelect.value) return '';
+      if (rerSelect.value === 'Aucune precision') return '';
+      return rerSelect.value;
+    }
+
+    function getIncident() {
+      const sel = document.getElementById('incident').value;
+      if (sel === 'custom') return document.getElementById('incident-custom').value || '—';
+      return sel;
+    }
+
+    function formatDate(dateStr, timeStr) {
+      if (!dateStr) return '—';
+      const [y, m, d] = dateStr.split('-');
+      return `${d}/${m}/${y} à ${timeStr || '00h00'}`.replace(':', 'h');
+    }
+
+    function getNow() {
+      const now = new Date();
+      const pad = n => String(n).padStart(2, '0');
+      return `${pad(now.getDate())}/${pad(now.getMonth() + 1)}/${now.getFullYear()} à ${pad(now.getHours())}h${pad(now.getMinutes())}mn`;
+    }
+
+    function getDeliveryDate() {
+      const dateStr = document.getElementById('delivery-date').value;
+      const timeStr = document.getElementById('delivery-time').value;
+      if (!dateStr) return getNow();
+      return `${formatDate(dateStr, timeStr)}mn`;
+    }
+
+    function getLigneBadgeHTML(ligne, rer) {
+      const bg = ligneColors[ligne] || '#003189';
+      const txtColor = ligneTextColors[ligne] || 'white';
+      if (rer) {
+        const rerLogo = rerLogosByLine[ligne];
+        if (!rerLogo) return `<span class="doc-ligne-badge">RER ${ligne}</span>`;
+
+        return `<span class="doc-ligne-badge">
+      <img src="${rerLogo}" alt="RER ${ligne}" style="height:20px;" onerror="this.closest('span').innerHTML='RER ${ligne}'">
+    </span>`;
+      } else {
+        return `<span class="doc-ligne-badge">
+      <span class="ligne-circle-badge" style="background:${bg};color:${txtColor};font-size:0.85rem;">${ligne}</span>
+    </span>`;
+      }
+    }
+
+    function updatePreview() {
+      const nom = document.getElementById('nom-voyageur').value || 'prénom nom';
+      const agent = document.getElementById('agent-num').value || 'XXXXXXXX';
+      const incident = getIncident();
+      const dateStr = document.getElementById('incident-date').value;
+      const timeStr = document.getElementById('incident-time').value;
+      const incidentDate = formatDate(dateStr, timeStr);
+      const delivDate = getDeliveryDate();
+      const rerOption = getSelectedRerOption();
+
+      const preview = document.getElementById('doc-preview');
+      preview.innerHTML = `
+    <div class="doc-header">
+      <div class="doc-title">Attestation de perturbation</div>
+      <div class="doc-logo">
+        <img src="ratp.png" alt="RATP" style="width: 100%; height: 100%; object-fit: contain;">
+      </div>
+    </div>
+
+    <div class="doc-checkboxes">
+      <div class="doc-checkbox">
+        <div class="doc-box">${selectedDelay === 15 ? '✓' : ''}</div>
+        <span>Perturbation supérieure à 15 minutes</span>
+      </div>
+      <div class="doc-checkbox">
+      <div class="doc-box checked">${selectedDelay === 30 ? '✓' : ''}</div>
+      <span>Perturbation supérieure à 30 minutes</span>
+      </div>
+    </div>
+
+    <div class="doc-field-incident">Nature de l'incident : <strong>${incident}</strong></div>
+    <div class="doc-field">Sur la ligne ${getLigneBadgeHTML(selectedLigne, isRER)}</div>
+    ${rerOption ? `<div class="doc-field">Option RER : <strong>${rerOption}</strong></div>` : ''}
+    <div class="doc-field">Survenu le <strong>${incidentDate}mn</strong></div>
+    <br>
+    <div class="doc-field">Attestation délivrée le <strong>${delivDate}</strong></div>
+    <div class="doc-field">à &nbsp;<strong>${nom}</strong></div>
+    <div class="doc-field">Par l'agent : <strong>${agent}</strong></div>
+
+    <hr class="doc-divider-1">
+
+    <div class="doc-italic">La RATP regrette le désagrément que vous déclarez avoir subi au cours de votre trajet et reste à votre service pour tout renseignement complémentaire.</div>
+
+    <div class="doc-contact">
+      <span class="doc-contact-num">34 24</span>&nbsp;&nbsp;
+      <span class="doc-contact-sub">(service gratuit + prix appel)</span>
+    </div>
+    <div class="doc-contact-links">ratp.fr | appli Bonjour RATP</div>
+    <div class="doc-contact-links">@ClientsRATP</div>
+
+    <hr class="doc-divider">
+
+    <div class="doc-disclaimer">Cette attestation ne saurait être assimilée à une reconnaissance <br> quelconque de matérialité ou d'une éventuelle responsabilité de la RATP.</div>
+  `;
+    }
+
+    function openPrintFallback(target, fileName) {
+      const styles = Array.from(document.querySelectorAll('style, link[rel="stylesheet"]'))
+        .map(el => el.outerHTML)
+        .join('\n');
+
+      const printWin = window.open('', '_blank', 'width=900,height=1200');
+      if (!printWin) {
+        alert("Impossible d'ouvrir la fenêtre d'impression (popup bloquée).");
+        return;
+      }
+
+      printWin.document.open();
+      printWin.document.write(`
+    <!DOCTYPE html>
+    <html lang="fr">
+    <head>
+      <meta charset="UTF-8" />
+      <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+      <title>${fileName.replace('.pdf', '')}</title>
+      ${styles}
+      <style>
+        body { margin: 0; padding: 0; background: #fff; }
+        .preview-card {
+          border-radius: 0 !important;
+          box-shadow: none !important;
+          max-width: 100% !important;
+        }
+        @page { size: A4; margin: 10mm; }
+      </style>
+    </head>
+    <body>${target.outerHTML}
+      <script>
+        (async function () {
+          if (document.fonts && document.fonts.ready) await document.fonts.ready;
+          setTimeout(() => {
+            window.print();
+            window.onafterprint = () => window.close();
+          }, 120);
+        })();
+      <\/script>
+    </body>
+    </html>
+  `);
+      printWin.document.close();
+    }
+
+    function loadScript(src) {
+      return new Promise((resolve, reject) => {
+        const script = document.createElement('script');
+        script.src = src;
+        script.async = true;
+        script.onload = resolve;
+        script.onerror = reject;
+        document.head.appendChild(script);
+      });
+    }
+
+    async function ensurePdfLibraries() {
+      const tasks = [];
+
+      if (!window.html2pdf) {
+        tasks.push(
+          loadScript('https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js')
+            .catch(() => loadScript('https://cdn.jsdelivr.net/npm/html2pdf.js@0.10.1/dist/html2pdf.bundle.min.js'))
+            .catch(() => null)
+        );
+      }
+
+      if (!window.html2canvas) {
+        tasks.push(
+          loadScript('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js')
+            .catch(() => loadScript('https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js'))
+            .catch(() => null)
+        );
+      }
+
+      if (!window.jspdf) {
+        tasks.push(
+          loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js')
+            .catch(() => loadScript('https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js'))
+            .catch(() => null)
+        );
+      }
+
+      if (tasks.length) await Promise.all(tasks);
+    }
+
+    function generatePDF() {
+      const target = document.querySelector('.preview-card');
+      if (!target) return;
+
+      const safeName = (document.getElementById('nom-voyageur').value || 'voyageur')
+        .trim()
+        .replace(/\s+/g, '_')
+        .toLowerCase();
+
+      const fileName = `attestation_ratp_${safeName}.pdf`;
+      openPrintFallback(target, fileName);
+    }
+  </script>
+</body>
+
+</html>
